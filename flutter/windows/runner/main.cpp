@@ -12,6 +12,16 @@
 #include "utils.h"
 #include "service_control.h"
 
+// OZEA: startup trace shared with the Rust side (%TEMP%\ozea_trace.log).
+#include <fstream>
+static void ozea_trace(const char* msg) {
+  wchar_t tmp[MAX_PATH];
+  if (!GetTempPathW(MAX_PATH, tmp)) return;
+  std::wstring path = std::wstring(tmp) + L"ozea_trace.log";
+  std::ofstream f(path, std::ios::app);
+  f << "[runner] " << msg << std::endl;
+}
+
 typedef char** (*FUNC_RUSTDESK_CORE_MAIN)(int*);
 typedef void (*FUNC_RUSTDESK_FREE_ARGS)( char**, int);
 typedef int (*FUNC_RUSTDESK_GET_APP_NAME)(wchar_t*, int);
@@ -56,6 +66,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   int args_len = 0;
   char** c_args = rustdesk_core_main(&args_len);
+  ozea_trace("core_main returned");
   if (!c_args)
   {
     std::string args_str = "";
@@ -95,6 +106,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   // Uri links dispatch
   HWND hwnd = ::FindWindowW(getWindowClassName(), app_name.c_str());
+  ozea_trace(hwnd ? "existing window found -> exit" : "no existing window");
   if (hwnd != NULL) {
     // Allow multiple flutter instances when being executed by parameters
     // contained in whitelists.
@@ -138,6 +150,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // Initialize COM, so that it is available for use in the library and/or
   // plugins.
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+  ozea_trace("COM initialised");
 
   flutter::DartProject project(L"data");
   // connection manager hide icon from taskbar
@@ -155,6 +168,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
   FlutterWindow window(project);
+  ozea_trace("FlutterWindow constructed");
 
   // Get primary monitor's work area.
   Win32Window::Point workarea_origin(0, 0);
@@ -182,6 +196,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   if (!window.CreateAndShow(window_title, origin, size, !is_cm_page)) {
       return EXIT_FAILURE;
   }
+  ozea_trace("window created and shown");
   window.SetQuitOnClose(true);
 
   ::MSG msg;
@@ -191,6 +206,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
     ::DispatchMessage(&msg);
   }
 
+  ozea_trace("message loop ended");
   ::CoUninitialize();
   return EXIT_SUCCESS;
 }

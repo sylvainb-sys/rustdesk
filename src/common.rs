@@ -2595,7 +2595,8 @@ pub fn read_custom_client(config: &str) {
         log::error!("Failed to decode custom client config");
         return;
     };
-    const KEY: &str = "5Qbwsde3unUcJBtrx9ZkvUmwFNoExHzpryHuPUdqlWM=";
+    // OZEA: custom.txt files are signed with the association's own key (see res/ozea/).
+    const KEY: &str = "Cqok73n+QIMvksM2hs4xrAvy+IBvMuZUUERQfj6klrU=";
     let Some(pk) = get_rs_pk(KEY) else {
         log::error!("Failed to parse public key of custom client");
         return;

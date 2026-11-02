@@ -996,9 +996,26 @@ def build_flutter_windows(version, features, skip_portable_pack):
     print(
         f'output location: {os.path.abspath(os.curdir)}/rustdesk-{version}-install.exe')
 
-
+def apply_ozea_server_settings():
+    """OZEA: hardcode the self-hosted server in the client at build time."""
+    server = os.environ.get("RENDEZVOUS_SERVER", "").strip()
+    key = os.environ.get("RS_PUB_KEY", "").strip()
+    if not server or not key:
+        print("OZEA: RENDEZVOUS_SERVER / RS_PUB_KEY not set, building stock client")
+        return
+    cfg = pathlib.Path("libs/hbb_common/src/config.rs")
+    src = cfg.read_text(encoding="utf-8")
+    new = re.sub(r'pub const RENDEZVOUS_SERVERS: &\[&str\] = &\[.*?\];',
+                 'pub const RENDEZVOUS_SERVERS: &[&str] = &["%s"];' % server, src, count=1)
+    new = re.sub(r'pub const RS_PUB_KEY: &str = ".*?";',
+                 'pub const RS_PUB_KEY: &str = "%s";' % key, new, count=1)
+    if new == src:
+        raise SystemExit("OZEA: config.rs patterns not found, refusing to build")
+    cfg.write_text(new, encoding="utf-8")
+    print("OZEA: hardcoded server=%s key=%s..." % (server, key[:8]))
 def main():
     global skip_cargo
+    apply_ozea_server_settings()
     parser = make_parser()
     args = parser.parse_args()
 

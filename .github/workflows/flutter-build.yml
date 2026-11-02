@@ -21,9 +21,6 @@ on:
 # in this file!
 
 env:
-  RENDEZVOUS_SERVER: ${{ vars.RENDEZVOUS_SERVER }}
-  RS_PUB_KEY: ${{ vars.RS_PUB_KEY }}
-  API_SERVER: ${{ vars.API_SERVER }}
   SCITER_RUST_VERSION: "1.75" # https://github.com/rustdesk/rustdesk/discussions/7503, also 1.78 has ABI change which causes our sciter version not working, https://blog.rust-lang.org/2024/03/30/i128-layout-update.html
   RUST_VERSION: "1.75" # sciter failed on m1 with 1.78 because of https://blog.rust-lang.org/2024/03/30/i128-layout-update.html
   MAC_RUST_VERSION: "1.81" # 1.81 is requred for macos, because of https://github.com/yury/cidre requires 1.81
@@ -472,6 +469,29 @@ jobs:
           mkdir -p ./SignOutput
           mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe
 
+      - name: Build OZEA custom clients
+        # OZEA: one build, several portable clients. Each variant is the stock payload plus a
+        # signed custom.txt (res/ozea/<Name>.custom.txt) and the executable renamed to <Name>.exe.
+        shell: bash
+        if: env.UPLOAD_ARTIFACT == 'true'
+        run: |
+          pushd ./libs/portable
+          for v in OzeaQuickSupport OzeaSupport; do
+            cfg="../../res/ozea/$v.custom.txt"
+            if [ ! -f "$cfg" ]; then
+              echo "OZEA: $cfg not found, skipping $v"
+              continue
+            fi
+            rm -rf "../../ozea-$v"
+            cp -r ../../rustdesk "../../ozea-$v"
+            mv "../../ozea-$v/rustdesk.exe" "../../ozea-$v/$v.exe"
+            cp "$cfg" "../../ozea-$v/custom.txt"
+            python3 ./generate.py -f "../../ozea-$v/" -o . -e "../../ozea-$v/$v.exe"
+            mv ../../target/release/rustdesk-portable-packer.exe "../../SignOutput/$v-${{ env.VERSION }}-${{ matrix.job.arch }}.exe"
+            echo "OZEA: built $v"
+          done
+          popd
+
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
         with:
@@ -566,9 +586,24 @@ jobs:
           path: ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.msi
           if-no-files-found: error
 
+      # OZEA: the Windows clients embed the association's server, so they are kept as a
+      # private artifact of the run (visible only when signed in) instead of a public release.
+      - name: Upload OZEA Windows clients (private artifact)
+        if: env.UPLOAD_ARTIFACT == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ozea-windows-clients-${{ matrix.job.arch }}
+          path: |
+            ./SignOutput/Ozea*.exe
+            ./SignOutput/rustdesk-*.exe
+            ./SignOutput/rustdesk-*.msi
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Publish Release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
-        if: env.UPLOAD_ARTIFACT == 'true' && env.PUBLISH_UPDATE_METADATA != 'true'
+        # OZEA: disabled, see the private artifact above.
+        if: false
         with:
           prerelease: true
           tag_name: ${{ env.TAG_NAME }}

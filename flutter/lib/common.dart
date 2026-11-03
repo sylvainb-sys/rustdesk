@@ -3024,7 +3024,9 @@ String getWindowName({WindowType? overrideType}) {
   final name = bind.mainGetAppNameSync();
   switch (overrideType ?? kWindowType) {
     case WindowType.Main:
-      return name;
+      // OZEA: optional display title set in the custom client config.
+      final ozeaTitle = bind.mainGetBuildinOption(key: "ozea-window-title");
+      return ozeaTitle.isNotEmpty ? ozeaTitle : name;
     case WindowType.FileTransfer:
       return "File Transfer - $name";
     case WindowType.ViewCamera:
@@ -3802,15 +3804,17 @@ class _LogoState extends State<_Logo> {
         if (asset != null) {
           final image = Image.asset(
             asset,
-            fit: BoxFit.contain,
+            fit: BoxFit.fitWidth,
             errorBuilder: (ctx, error, stackTrace) {
               return Container();
             },
           );
+          // OZEA: the logo is a full-width banner (no side margins).
           return Container(
-            constraints: BoxConstraints(maxWidth: 300, maxHeight: 60),
+            width: double.infinity,
+            constraints: BoxConstraints(maxHeight: 60),
             child: image,
-          ).marginOnly(left: 12, right: 12, top: 12);
+          );
         }
         return const Offstage();
       },

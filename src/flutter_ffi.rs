@@ -88,7 +88,6 @@ fn initialize(app_dir: &str, custom_client_config: &str) {
 
 #[inline]
 pub fn start_global_event_stream(s: StreamSink<String>, app_type: String) -> ResultType<()> {
-    crate::common::ozea_trace(&format!("ffi: start_global_event_stream {}", app_type));
     super::flutter::start_global_event_stream(s, app_type)
 }
 
@@ -1146,7 +1145,6 @@ pub fn main_get_app_name() -> String {
 }
 
 pub fn main_get_app_name_sync() -> SyncReturn<String> {
-    crate::common::ozea_trace("ffi: main_get_app_name_sync");
     SyncReturn(get_app_name())
 }
 
@@ -1863,13 +1861,11 @@ pub fn cm_get_clients_length() -> usize {
 }
 
 pub fn main_init(app_dir: String, custom_client_config: String) {
-    crate::common::ozea_trace("ffi: main_init");
     initialize(&app_dir, &custom_client_config);
     crate::keyboard::shortcuts::reload_from_config();
 }
 
 pub fn main_device_id(id: String) {
-    crate::common::ozea_trace("ffi: main_device_id");
     *crate::common::DEVICE_ID.lock().unwrap() = id;
 }
 
@@ -2555,7 +2551,6 @@ pub fn main_support_remove_wallpaper() -> bool {
 }
 
 pub fn is_incoming_only() -> SyncReturn<bool> {
-    crate::common::ozea_trace("ffi: is_incoming_only");
     SyncReturn(config::is_incoming_only())
 }
 

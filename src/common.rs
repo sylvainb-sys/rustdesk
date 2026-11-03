@@ -2492,15 +2492,6 @@ pub fn rustdesk_interval(i: Interval) -> ThrottledInterval {
     ThrottledInterval::new(i)
 }
 
-/// OZEA: lightweight startup trace (no logger available this early). Appends to %TEMP%/ozea_trace.log.
-pub fn ozea_trace(msg: &str) {
-    use std::io::Write;
-    let path = std::env::temp_dir().join("ozea_trace.log");
-    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
-        let _ = writeln!(f, "[{}] {}", chrono::Local::now().format("%H:%M:%S%.3f"), msg);
-    }
-}
-
 pub fn load_custom_client() {
     #[cfg(debug_assertions)]
     if let Ok(data) = std::fs::read_to_string("./custom_.txt") {
@@ -2513,15 +2504,15 @@ pub fn load_custom_client() {
     };
     #[cfg(target_os = "macos")]
     let path = path.join("../Resources");
+    // OZEA: the file is named custom_.txt (not custom.txt), as in the rdgen generator:
+    // a file named custom.txt next to the executable makes the Flutter client exit at startup.
     let path = path.join("custom_.txt");
     if path.is_file() {
-        ozea_trace("load_custom_client: custom_.txt found");
         let Ok(data) = std::fs::read_to_string(&path) else {
             log::error!("Failed to read custom client config");
             return;
         };
         read_custom_client(&data.trim());
-        ozea_trace("load_custom_client: done");
     }
 }
 
@@ -2606,23 +2597,18 @@ pub fn read_custom_client(config: &str) {
         log::error!("Failed to decode custom client config");
         return;
     };
-    // OZEA: custom.txt files are signed with the association's own key (see res/ozea/).
+    // OZEA: custom client files are signed with the association's own key (see res/ozea/).
     const KEY: &str = "Cqok73n+QIMvksM2hs4xrAvy+IBvMuZUUERQfj6klrU=";
     let Some(pk) = get_rs_pk(KEY) else {
         log::error!("Failed to parse public key of custom client");
         return;
     };
-    // OZEA: libsodium must be initialised before any crypto call; this is the first
-    // crypto operation of the process (the other signature checks in this code base
-    // call sodiumoxide::init() first too).
-    ozea_trace("read_custom_client: init sodium");
+    // OZEA: first crypto call of the process, initialise libsodium like the other verifiers do.
     let _ = hbb_common::sodiumoxide::init();
-    ozea_trace("read_custom_client: verify");
     let Ok(data) = sign::verify(&data, &pk) else {
         log::error!("Failed to dec custom client config");
         return;
     };
-    ozea_trace("read_custom_client: verify ok");
     let Ok(mut data) =
         serde_json::from_slice::<std::collections::HashMap<String, serde_json::Value>>(&data)
     else {
@@ -2635,7 +2621,6 @@ pub fn read_custom_client(config: &str) {
             *config::APP_NAME.write().unwrap() = app_name.to_owned();
         }
     }
-    ozea_trace(&format!("read_custom_client: app name = {}", get_app_name()));
 
     let mut map_display_settings = HashMap::new();
     for s in keys::KEYS_DISPLAY_SETTINGS {

@@ -488,7 +488,7 @@ jobs:
             rm -rf "../../ozea-$v"
             cp -r ../../rustdesk "../../ozea-$v"
             mv "../../ozea-$v/rustdesk.exe" "../../ozea-$v/$v.exe"
-            cp "$cfg" "../../ozea-$v/custom.txt"
+            cp "$cfg" "../../ozea-$v/custom_.txt"
             python3 ./generate.py -f "../../ozea-$v/" -o . -e "../../ozea-$v/$v.exe"
             mv ../../target/release/rustdesk-portable-packer.exe "../../SignOutput/$v-${{ env.VERSION }}-${{ matrix.job.arch }}.exe"
             echo "OZEA: built $v"

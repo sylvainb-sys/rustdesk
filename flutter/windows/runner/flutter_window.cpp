@@ -19,16 +19,6 @@
 
 #include "win32_desktop.h"
 
-// OZEA: startup trace (%TEMP%\ozea_trace.log)
-#include <fstream>
-#include <string>
-static void ozea_trace_w(const char* msg) {
-  wchar_t tmp[MAX_PATH];
-  if (!GetTempPathW(MAX_PATH, tmp)) return;
-  std::ofstream f(std::wstring(tmp) + L"ozea_trace.log", std::ios::app);
-  f << "[runner] " << msg << std::endl;
-}
-
 namespace {
 
 // If the window is resized between the creation of the Flutter surface and the
@@ -101,7 +91,6 @@ bool FlutterWindow::OnCreate() {
   if (!Win32Window::OnCreate()) {
     return false;
   }
-  ozea_trace_w("OnCreate: base ok");
 
   RECT frame = GetClientArea();
 
@@ -109,13 +98,11 @@ bool FlutterWindow::OnCreate() {
   // creation / destruction in the startup path.
   flutter_controller_ = std::make_unique<flutter::FlutterViewController>(
       frame.right - frame.left, frame.bottom - frame.top, project_);
-  ozea_trace_w("OnCreate: FlutterViewController created (engine running)");
   // Ensure that basic setup of the controller was successful.
   if (!flutter_controller_->engine() || !flutter_controller_->view()) {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
-  ozea_trace_w("OnCreate: plugins registered");
 
   flutter::MethodChannel<> channel(
     flutter_controller_->engine()->messenger(),
@@ -168,12 +155,10 @@ bool FlutterWindow::OnCreate() {
         registry->GetRegistrarForPlugin("FlutterGpuTextureRendererPluginCApi"));
   });
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
-  ozea_trace_w("OnCreate: child content set");
 
   // See the comment on kForceRedrawTimerId above.
   flutter_controller_->engine()->SetNextFrameCallback(
       [this]() { first_frame_rendered_ = true; });
-  ozea_trace_w("OnCreate: done");
   SetTimer(GetHandle(), kForceRedrawTimerId, kForceRedrawIntervalMs, nullptr);
 
   return true;

@@ -12,47 +12,6 @@
 #include "utils.h"
 #include "service_control.h"
 
-// OZEA: startup trace shared with the Rust side (%TEMP%\ozea_trace.log).
-#include <fstream>
-static void ozea_trace(const char* msg) {
-  wchar_t tmp[MAX_PATH];
-  if (!GetTempPathW(MAX_PATH, tmp)) return;
-  std::wstring path = std::wstring(tmp) + L"ozea_trace.log";
-  std::ofstream f(path, std::ios::app);
-  f << "[runner] " << msg << std::endl;
-}
-
-// OZEA: catch the reason of an abort()/terminate() and log it before dying.
-#include <csignal>
-#include <exception>
-#include <cstdlib>
-static void ozea_on_abort(int) { ozea_trace("SIGABRT raised (abort() called)"); }
-static void ozea_on_terminate() {
-  ozea_trace("std::terminate called");
-  try {
-    std::exception_ptr p = std::current_exception();
-    if (p) std::rethrow_exception(p);
-    ozea_trace("terminate: no active exception");
-  } catch (const std::exception& e) {
-    ozea_trace((std::string("terminate: std::exception: ") + e.what()).c_str());
-  } catch (...) {
-    ozea_trace("terminate: non-std exception");
-  }
-  std::abort();
-}
-static void ozea_on_invalid_parameter(const wchar_t*, const wchar_t*, const wchar_t*, unsigned int, uintptr_t) {
-  ozea_trace("CRT invalid parameter handler");
-}
-static void ozea_on_purecall() { ozea_trace("CRT pure virtual call"); }
-static void ozea_install_handlers() {
-  std::signal(SIGABRT, ozea_on_abort);
-  std::set_terminate(ozea_on_terminate);
-  _set_invalid_parameter_handler(ozea_on_invalid_parameter);
-  _set_purecall_handler(ozea_on_purecall);
-  std::atexit([]() { ozea_trace("atexit: normal exit path"); });
-  ozea_trace("handlers installed");
-}
-
 typedef char** (*FUNC_RUSTDESK_CORE_MAIN)(int*);
 typedef void (*FUNC_RUSTDESK_FREE_ARGS)( char**, int);
 typedef int (*FUNC_RUSTDESK_GET_APP_NAME)(wchar_t*, int);
@@ -65,7 +24,6 @@ const wchar_t* getWindowClassName();
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command)
 {
-  ozea_install_handlers();
   if (auto result = service_control::HandleCommand(command_line)) {
     return static_cast<int>(*result);
   }
@@ -98,7 +56,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   int args_len = 0;
   char** c_args = rustdesk_core_main(&args_len);
-  ozea_trace("core_main returned");
   if (!c_args)
   {
     std::string args_str = "";
@@ -138,7 +95,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   // Uri links dispatch
   HWND hwnd = ::FindWindowW(getWindowClassName(), app_name.c_str());
-  ozea_trace(hwnd ? "existing window found -> exit" : "no existing window");
   if (hwnd != NULL) {
     // Allow multiple flutter instances when being executed by parameters
     // contained in whitelists.
@@ -182,7 +138,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // Initialize COM, so that it is available for use in the library and/or
   // plugins.
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-  ozea_trace("COM initialised");
 
   flutter::DartProject project(L"data");
   // connection manager hide icon from taskbar
@@ -200,7 +155,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
   FlutterWindow window(project);
-  ozea_trace("FlutterWindow constructed");
 
   // Get primary monitor's work area.
   Win32Window::Point workarea_origin(0, 0);
@@ -228,7 +182,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   if (!window.CreateAndShow(window_title, origin, size, !is_cm_page)) {
       return EXIT_FAILURE;
   }
-  ozea_trace("window created and shown");
   window.SetQuitOnClose(true);
 
   ::MSG msg;
@@ -238,7 +191,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
     ::DispatchMessage(&msg);
   }
 
-  ozea_trace("message loop ended");
   ::CoUninitialize();
   return EXIT_SUCCESS;
 }

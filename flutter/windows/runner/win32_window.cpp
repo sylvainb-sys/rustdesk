@@ -9,16 +9,6 @@
 #include <cstring> // for strcmp
 #include <string> // for std::wstring
 
-// OZEA: startup trace (%TEMP%\ozea_trace.log)
-#include <fstream>
-#include <string>
-static void ozea_trace_w(const char* msg) {
-  wchar_t tmp[MAX_PATH];
-  if (!GetTempPathW(MAX_PATH, tmp)) return;
-  std::ofstream f(std::wstring(tmp) + L"ozea_trace.log", std::ios::app);
-  f << "[runner] " << msg << std::endl;
-}
-
 namespace {
 
 constexpr const wchar_t kWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
@@ -175,7 +165,6 @@ bool Win32Window::CreateAndShow(const std::wstring& title,
 
   const wchar_t* window_class =
       WindowClassRegistrar::GetInstance()->GetWindowClass();
-  ozea_trace_w("window class registered");
 
   const POINT target_point = {static_cast<LONG>(origin.x),
                               static_cast<LONG>(origin.y)};
@@ -193,9 +182,7 @@ bool Win32Window::CreateAndShow(const std::wstring& title,
     return false;
   }
 
-  ozea_trace_w("CreateWindow ok");
   if (!showOnTaskBar) {
-
     // hide from taskbar
     HRESULT hr;
     ITaskbarList* pTaskbarList;

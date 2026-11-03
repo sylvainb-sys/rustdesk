@@ -1,0 +1,21 @@
+{
+  "app-name": "OzeaQuickSupport",
+  "conn-type": "incoming",
+  "disable-installation": "Y",
+  "disable-settings": "Y",
+  "disable-ab": "Y",
+  "disable-account": "Y",
+  "default-settings": {
+    "ozea-window-title": "Télémaintenance OZEA",
+    "hide-powered-by-me": "Y"
+  },
+  "override-settings": {
+    "theme": "light",
+    "verification-method": "use-temporary-password",
+    "approve-mode": "password",
+    "temporary-password-length": "8",
+    "enable-check-update": "N",
+    "enable-lan-discovery": "N",
+    "hide-help-cards": "Y"
+  }
+}

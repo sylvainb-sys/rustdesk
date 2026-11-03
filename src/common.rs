@@ -2503,7 +2503,7 @@ pub fn ozea_trace(msg: &str) {
 
 pub fn load_custom_client() {
     #[cfg(debug_assertions)]
-    if let Ok(data) = std::fs::read_to_string("./custom.txt") {
+    if let Ok(data) = std::fs::read_to_string("./custom_.txt") {
         read_custom_client(data.trim());
         return;
     }
@@ -2515,7 +2515,7 @@ pub fn load_custom_client() {
     let path = path.join("../Resources");
     let path = path.join("custom.txt");
     if path.is_file() {
-        ozea_trace("load_custom_client: custom.txt found");
+        ozea_trace("load_custom_client: custom_.txt found");
         let Ok(data) = std::fs::read_to_string(&path) else {
             log::error!("Failed to read custom client config");
             return;

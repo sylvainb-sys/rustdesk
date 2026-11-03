@@ -2513,7 +2513,7 @@ pub fn load_custom_client() {
     };
     #[cfg(target_os = "macos")]
     let path = path.join("../Resources");
-    let path = path.join("custom.txt");
+    let path = path.join("custom_.txt");
     if path.is_file() {
         ozea_trace("load_custom_client: custom_.txt found");
         let Ok(data) = std::fs::read_to_string(&path) else {
